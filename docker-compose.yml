@@ -1,0 +1,36 @@
+version: "2.3"
+
+services:
+  test:
+    image: alpine
+    container_name: test
+    working_dir: /app
+    command: sh -c "apk add curl; sleep 1000000"
+    network_mode: container:wireguard
+  test2:
+    image: alpine
+    container_name: test2
+    working_dir: /app
+    command: sh -c "apk add curl; sleep 1000000"
+    networks:
+      - wireguard-go
+  wireguard:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    container_name: wireguard
+    command: sh -c "gow run src/*"
+    cap_add:
+      - NET_ADMIN
+    networks:
+      - wireguard-go
+    volumes:
+      - ./:/app
+      - ./config:/config
+      - /dev/net/tun:/dev/net/tun
+    ports:
+      - 51820:51820/udp
+    restart: unless-stopped
+networks:
+  wireguard-go:
+    driver: bridge

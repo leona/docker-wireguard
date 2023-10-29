@@ -1,0 +1,12 @@
+ARG GOLANG_VERSION=1.21
+ARG ALPINE_VERSION=3.18
+FROM golang:${GOLANG_VERSION}-alpine${ALPINE_VERSION} as builder
+
+WORKDIR /app
+COPY . ./
+RUN go mod download && go build -o bin/docker-wireguard src/*
+FROM alpine:${ALPINE_VERSION}
+RUN apk add --no-cache --update iptables bash iproute2 iproute2-ss curl
+COPY --from=builder /app/bin/docker-wireguard /usr/local/bin/
+
+CMD ["docker-wireguard"]
