@@ -103,15 +103,15 @@ func (wm *Wireman) SetupIptables() {
 		log.Panic(err)
 	}
 
-	if err := ipt.ChangePolicy("filter", "OUTPUT", "DROP"); err != nil {
+	if err := ipt.AppendUnique("filter", "FORWARD", "-i", "wg0", "-j", "ACCEPT"); err != nil {
 		log.Panic(err)
 	}
 
-	if err := ipt.AppendUnique("filter", "OUTPUT", "-o", "wg0", "-j", "ACCEPT"); err != nil {
+	if err := ipt.AppendUnique("filter", "FORWARD", "-o", "wg0", "-j", "ACCEPT"); err != nil {
 		log.Panic(err)
 	}
 
-	if err := ipt.AppendUnique("filter", "OUTPUT", "-o", "lo", "-j", "ACCEPT"); err != nil {
+	if err := ipt.AppendUnique("nat", "POSTROUTING", "-o", "eth+", "-j", "MASQUERADE"); err != nil {
 		log.Panic(err)
 	}
 
@@ -184,10 +184,16 @@ func (wm *Wireman) ConfigureRoutes() {
 	_, defaultDst, _ := net.ParseCIDR("0.0.0.0/1")
 	route := netlink.Route{Dst: defaultDst, LinkIndex: link.Attrs().Index}
 
-	if err := netlink.RouteAdd(&route); err != nil {
+	if err := netlink.RouteReplace(&route); err != nil {
 		log.Panic(err)
 	}
 
+	_, defaultDst, _ = net.ParseCIDR("127.0.0.0/1")
+	route = netlink.Route{Dst: defaultDst, LinkIndex: link.Attrs().Index}
+
+	if err := netlink.RouteReplace(&route); err != nil {
+		log.Panic(err)
+	}
 	_, defaultDst, _ = net.ParseCIDR(wm.Config.Address)
 	defaultGateway := GetDefaultGateway()
 
@@ -197,7 +203,7 @@ func (wm *Wireman) ConfigureRoutes() {
 		Gw:        net.ParseIP(defaultGateway),
 	}
 
-	if err := netlink.RouteAdd(&route); err != nil {
+	if err := netlink.RouteReplace(&route); err != nil {
 		log.Println("route already exists", defaultGateway, "-", wm.Config.Address)
 	}
 }

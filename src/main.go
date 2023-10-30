@@ -10,14 +10,12 @@ func main() {
 	config = MakeConfig()
 	wireman := MakeWireman("wg0", 51820)
 
+	if config.DisableKillswitch {
+		log.Println("WARNING: Kill switch disabled")
+	}
+
 	if config.MullvadAccount != "" {
 		mullvad := MakeMullvad(config.MullvadAccount)
-
-		if !config.DisableKillswitch {
-			wireman.ToggleDNS(true)
-			wireman.Allow(domainToIp(mullvad.BaseUrl))
-		}
-
 		mullvad.SetKeyPair()
 		mullvad.VerifyKeyPair()
 		mullvad.GetServers()

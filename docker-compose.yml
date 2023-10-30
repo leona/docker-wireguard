@@ -2,12 +2,16 @@ version: "2.3"
 
 services:
   test:
+    depends_on:
+      - wireguard
     image: alpine
     container_name: test
     working_dir: /app
     command: sh -c "apk add curl; sleep 1000000"
     network_mode: container:wireguard
   test2:
+    depends_on:
+      - wireguard
     image: alpine
     container_name: test2
     working_dir: /app
@@ -28,6 +32,11 @@ services:
       - ./:/app
       - ./config:/config
       - /dev/net/tun:/dev/net/tun
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.src_valid_mark=1
+    environment:
+      - DISABLE_KILLSWITCH=false
     ports:
       - 51820:51820/udp
     restart: unless-stopped
