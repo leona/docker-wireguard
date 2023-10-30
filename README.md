@@ -1,8 +1,14 @@
 # docker-wireguard
 
-## Example usage
+Docker Wireguard implementation using [wireguard-go](https://github.com/WireGuard/wireguard-go), [wgctrl](https://github.com/WireGuard/wgctrl-go) & [netlink](https://github.com/vishvananda/netlink).
 
-This image allows you to route containers through your Wireguard VPN.
+## Try it out
+
+```
+docker pull nxie/wireguard
+```
+
+## Example usage
 
 ```
 services:
