@@ -19,6 +19,7 @@ type Mullvad struct {
 	Servers *MullvadServers
 	Keypair *WireguardKeypair
 	Key     *MullvadKey
+	DNS MullvadBlocking
 }
 
 type WireguardKeypair struct {
@@ -26,11 +27,21 @@ type WireguardKeypair struct {
 	PublicKey  string `json:"publicKey"`
 }
 
-func MakeMullvad(account string) *Mullvad {
+type MullvadBlocking string
+
+const (
+	MULLVAD_BLOCKING_MALWARE MullvadBlocking = "100.64.0.4" // Malware blocking only
+	MULLVAD_BLOCKING_AD_MALWARE MullvadBlocking = "100.64.0.5" // Ad and malware blocking, no tracker blocking
+	MULLVAD_BLOCKING_TRACKER_MALWARE MullvadBlocking = "100.64.0.6" // Tracker and malware blocking, no ad blocking
+	MULLVAD_BLOCKING_ALL MullvadBlocking = "100.64.0.7" // Ad, tracker and malware blocking (“everything”)
+)
+
+func MakeMullvad(account string, dns MullvadBlocking) *Mullvad {
 	log.Println("Setting up Mullvad account:", account)
 	mullvad := &Mullvad{
 		Account: account,
 		BaseUrl: "https://api.mullvad.net/",
+		DNS: dns,
 	}
 
 	return mullvad
@@ -65,7 +76,7 @@ func (m *Mullvad) Get(endpoint string, response interface{}) error {
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		log.Println("Failed to GET Mullvad API:", resp.StatusCode, "for", m.BaseUrl+endpoint)
-		return errors.New(resp.Status)
+		return errors.New(string(resp.StatusCode))
 	}
 
 	return nil
@@ -205,7 +216,11 @@ func (m *Mullvad) VerifyKeyPair() {
 	var data *MullvadKey
 
 	if err := m.Get("app/v1/wireguard-keys/"+m.Keypair.PublicKey, &data); err != nil || data.Id == "" {
-		log.Println("Registering new Mullvad keypair")
+		if err.Error() != string(http.StatusNotFound) {
+			log.Panic("Failed to check keypair", err)
+		}
+
+		log.Println("Registering new Mullvad keypair", err)
 
 		addKey := &AddMullvadKey{
 			Pubkey: m.Keypair.PublicKey,
@@ -242,6 +257,7 @@ func (m *Mullvad) CheckConfigs() {
 						EndpointPort:    51820,
 						AllowedIPs:      []string{"0.0.0.0/0"},
 						Address:         m.Key.Ipv4Address,
+						DNS: 					 string(m.DNS),
 					}
 
 					err := config.Save(configPath)

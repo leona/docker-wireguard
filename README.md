@@ -14,12 +14,18 @@ docker pull nxie/wireguard
 services:
   test:
     depends_on:
-      - wireguard
+      wireguard:
+        condition: service_healthy
     image: alpine
     network_mode: container:wireguard
   wireguard:
     image: nxie/wireguard
     container_name: wireguard
+    healthcheck:
+      test: bash -c "[ -f /tmp/wireguard.lock ]"
+      interval: 1s
+      timeout: 3s
+      retries: 10
     cap_add:
       - NET_ADMIN
     environment:

@@ -12,6 +12,18 @@ import (
 	"time"
 )
 
+func SetLockFile(name string, state bool) {
+	path := "/tmp/" + name + ".lock"
+
+	if state {
+		log.Println("Creating lock file:", name)
+		os.Create(path)
+	} else {
+		log.Println("Removing lock file:", name)
+		os.Remove(path)
+	}
+}
+
 func DefaultString(input string, defaultValue string) string {
 	if input == "" {
 		return defaultValue

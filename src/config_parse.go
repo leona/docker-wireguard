@@ -16,6 +16,7 @@ type WireguardConfig struct {
 	EndpointPort    int
 	AllowedIPs      []string
 	Address         string
+	DNS  string
 }
 
 func MakeWireguardConfigFromFile(configPath string) (*WireguardConfig, error) {
@@ -43,6 +44,8 @@ func MakeWireguardConfigFromFile(configPath string) (*WireguardConfig, error) {
 		value := strings.TrimSpace(otherParts)
 
 		switch key {
+		case "DNS":
+			config.DNS = value
 		case "PrivateKey":
 			config.PrivateKey = value
 		case "PublicKey":
@@ -87,8 +90,9 @@ func (w *WireguardConfig) Serialize() string {
 	return fmt.Sprintf(`[Interface]
 PrivateKey=%s
 Address=%s
+DNS=%s
 [Peer]
 PublicKey=%s
 AllowedIPs=%s
-Endpoint=%s`, w.PrivateKey, w.Address, w.PublicKey, strings.Join(w.AllowedIPs, ","), w.EndpointAddress+":"+strconv.Itoa(w.EndpointPort))
+Endpoint=%s`, w.PrivateKey, w.Address, w.DNS, w.PublicKey, strings.Join(w.AllowedIPs, ","), w.EndpointAddress+":"+strconv.Itoa(w.EndpointPort))
 }

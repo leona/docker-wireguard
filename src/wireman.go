@@ -18,6 +18,7 @@ import (
 	"time"
 	"net/http"
 	"io"
+	"os"
 )
 
 type Wireman struct {
@@ -37,6 +38,7 @@ func MakeWireman(interfaceName string, listenPort int) *Wireman {
 		wireman.SetupIptables()
 	}
 
+	wireman.SetDNS("127.0.0.11")
 	return wireman
 }
 
@@ -48,9 +50,11 @@ func (wm *Wireman) Up(profile *WireguardConfig) {
 		wm.Allow(profile.EndpointAddress)
 	}
 
+	wm.SetDNS(profile.DNS)
 	wm.CreateDevice()
 	wm.ConfigureDevice()
 	wm.ConfigureRoutes()
+	SetLockFile("wireguard", true)
 }
 
 func (wm *Wireman) CreateDevice() error {
@@ -90,6 +94,19 @@ func (wm *Wireman) CreateDevice() error {
 	return nil
 }
 
+func (wm *Wireman) SetDNS(dns string) {
+	if dns == "" {
+		log.Println("No DNS provided, skipping")
+		return
+	}
+	
+	log.Println("Setting DNS to:", dns)
+	resolvConf := "/etc/resolv.conf"
+	resolvConfContent := "nameserver " + dns + "\noptions ndots:0"
+	err := os.WriteFile(resolvConf, []byte(resolvConfContent), 0644)
+	FatalError(err)
+}
+
 func (wm *Wireman) SetupIptables() {
 	log.Println("Setting up iptables")
 	ipt, err := iptables.New()
@@ -104,6 +121,10 @@ func (wm *Wireman) SetupIptables() {
 	}
 
 	if err := ipt.AppendUnique("filter", "FORWARD", "-i", "wg0", "-j", "ACCEPT"); err != nil {
+		log.Panic(err)
+	}
+
+	if err := ipt.AppendUnique("filter", "FORWARD", "-o", "wg0", "-j", "ACCEPT"); err != nil {
 		log.Panic(err)
 	}
 
@@ -228,6 +249,7 @@ func GetDefaultGateway() string {
 
 func (wm *Wireman) TestTicker() {
 	interval := 1 * time.Minute
+	time.Sleep(5 * time.Second)
 	wm.Test()
 
 	for range time.Tick(interval) {

@@ -2,11 +2,21 @@ package main
 
 import (
 	"log"
+	"os"
+	"fmt"
 )
 
 var config *Config
 
 func main() {
+	defer func() {
+		if err := recover(); err != nil {
+			fmt.Fprintf(os.Stderr, "Exception: %v\n", err)
+			SetLockFile("wireguard", false)
+			os.Exit(1)
+		}
+	}()
+
 	config = MakeConfig()
 	wireman := MakeWireman("wg0", 51820)
 
@@ -15,7 +25,7 @@ func main() {
 	}
 
 	if config.MullvadAccount != "" {
-		mullvad := MakeMullvad(config.MullvadAccount)
+		mullvad := MakeMullvad(config.MullvadAccount, MULLVAD_BLOCKING_MALWARE)
 		mullvad.SetKeyPair()
 		mullvad.VerifyKeyPair()
 		mullvad.GetServers()
